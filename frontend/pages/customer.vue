@@ -42,83 +42,93 @@
   </template>
 
   
+<script>
+// import CustomerForm and EditCustomerForm components from their respective files
+import CustomerForm from '../components/CustomerForm.vue'
+import EditCustomerForm from '../components/EditCustomerForm.vue'
+
+export default {
+  // register CustomerForm and EditCustomerForm components
+  components: { CustomerForm, EditCustomerForm },
   
-  <script>
-  import CustomerForm from '../components/CustomerForm.vue'
-  import EditCustomerForm from '../components/EditCustomerForm.vue'
-  
-  export default {
-    components: { CustomerForm, EditCustomerForm },
-  
-    created() {
-      this.getCustomers();
+  // fetch customers data when the component is created
+  created() {
+    this.getCustomers();
+  },
+
+  data() {
+    // define the component's data properties
+    return {
+      // dialog state for adding a new customer
+      dialog: false,
+      // list of all customers
+      customers: [],
+      // list of all employees
+      employees: [],
+      // table headers for displaying customer data
+      headers: [
+        { text: 'First Name', value: 'first_name' },
+        { text: 'Last Name', value: 'last_name' },
+        { text: 'Email', value: 'email' },
+        { text: 'Purchase Amount', value: 'purchase' },
+        { text: 'Purchase Date', value: 'purchase_date' },
+        { text: 'Employee ID', value: 'employee_id' },
+        { text: 'Employee Name', value: 'employee_name'},
+        { text: 'Actions', value: 'active', sortable: false },
+      ],
+      // the ID of the customer being edited
+      customer_id: null,
+      // dialog state for editing a customer
+      editDialog: false,
+    }
+  },
+
+  computed: {
+    // compute the total purchase amount of all customers
+    totalPurchase() {
+      return this.customers.reduce((acc, customer) => acc + Number(customer.purchase.replace(/[^0-9.-]+/g,"")), 0).toLocaleString('en-US', { style: 'currency', currency: 'AUD' })
     },
-  
-    data() {
-      return {
-        dialog: false,
-        customers: [],
-        employees: [],
-        headers: [
-          { text: 'First Name', value: 'first_name' },
-          { text: 'Last Name', value: 'last_name' },
-          { text: 'Email', value: 'email' },
-          { text: 'Purchase Amount', value: 'purchase' },
-          { text: 'Purchase Date', value: 'purchase_date' },
-          { text: 'Employee ID', value: 'employee_id' },
-          { text: 'Employee Name', value: 'employee_name'},
-          { text: 'Actions', value: 'active', sortable: false },
-        ],
-        customer_id: null,
-        editDialog: false,
+  },
+
+  watch: {
+    // set customer_id to null when the edit dialog is closed
+    editDialog: function (val) {
+      if (!val) {
+        this.customer_id = null
       }
-      
-    },
-  
-    computed: {
-      totalPurchase() {
-        return this.customers.reduce((acc, customer) => acc + Number(customer.purchase.replace(/[^0-9.-]+/g,"")), 0).toLocaleString('en-US', { style: 'currency', currency: 'AUD' })
-      },
-      
-    },
-    watch: {
-      editDialog: function (val) {
-        if (!val) {
-          this.customer_id = null
-        }
-      }
-    },
-  
-    methods: {
+    }
+  },
 
-      async getCustomers() {
-        this.employees = await this.$axios.$get('/employee/employees');
-        this.customers = await this.$axios.$get('/customer/customers');
+  methods: {
+    // fetch customers and employees data from the server
+    async getCustomers() {
+      this.employees = await this.$axios.$get('/employee/employees');
+      this.customers = await this.$axios.$get('/customer/customers');
 
-        let employeeLookup = this.employees.reduce((acc, employee) => {
-          acc[employee.id] = employee.first_name + ' ' + employee.last_name;
-          return acc;
-        }, {});
-       
+      // create a lookup table for employees
+      let employeeLookup = this.employees.reduce((acc, employee) => {
+        acc[employee.id] = employee.first_name + ' ' + employee.last_name;
+        return acc;
+      }, {});
 
-        this.customers.forEach(customer => {
-          customer.purchase = customer.purchase.toLocaleString('en-US', { style: 'currency', currency: 'AUD' })
-          customer.employee_name = employeeLookup[customer.employee_id] || 'No Employee';
-        })
-
-      },
-  
-      async deleteCustomer(id) {
-        await this.$axios.$delete('/customer/customer', { params: { id } })
-        this.getCustomers()
-      },
-  
-      async editCustomer(id) {
-        this.customer_id = id
-        this.editDialog = true
-        
-      },
+      // format purchase amount and employee name for each customer
+      this.customers.forEach(customer => {
+        customer.purchase = customer.purchase.toLocaleString('en-US', { style: 'currency', currency: 'AUD' })
+        customer.employee_name = employeeLookup[customer.employee_id] || 'No Employee';
+      })
     },
-    
-  }
-  </script>
+
+    // delete a customer from the server
+    async deleteCustomer(id) {
+      await this.$axios.$delete('/customer/customer', { params: { id } })
+      this.getCustomers()
+    },
+
+    // open the edit dialog for a customer
+    async editCustomer(id) {
+      this.customer_id = id
+      this.editDialog = true
+    },
+  },
+}
+</script>
